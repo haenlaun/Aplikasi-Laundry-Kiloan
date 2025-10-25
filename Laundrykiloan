@@ -1,0 +1,1259 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aplikasi Pencatatan Laundry Kiloan</title>
+  
+  <style>
+    /* Variabel Warna dari BMT HAEN (Dipertahankan) */
+    :root{
+      --bg:#f2fbf7;
+      --card:#ffffff;
+      --primary:#12a87a; /* Warna Hijau Toska Utama*/
+      --primary-2:#1e90ff; 
+      --muted:#4a5568;
+      --danger:#e03b3b;
+      --ring:#d7efe6;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#e9fdf5 0%,#f7fbff 60%,#ffffff 100%);color:#0b1b2b}
+    .app{
+      max-width:960px;
+      margin:18px auto;
+      border-radius:16px;
+      overflow:hidden;
+      box-shadow:0 14px 40px rgba(6,10,20,.08); 
+      padding-top: 100px; /* PENTING: Ruang untuk header fixed*/
+    }
+    header{
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      /* Gradien warna dari BMT HAEN */
+      background:linear-gradient(100deg,var(--primary),#17b890 40%, var(--primary-2) 150%);
+      color:var(--card);padding:24px 32px;
+      max-width: 960px;
+      margin: 0 auto;
+      border-radius: 0 0 16px 16px;
+      box-shadow:0 14px 40px rgba(6,10,20,.08);
+    }
+    header h1{font-size:1.8em;margin:0}
+    header .tabs{display:flex;margin-top:16px;gap:8px; overflow-x: auto; -webkit-overflow-scrolling: touch;}
+    header .tabs .tab{
+      white-space: nowrap;
+      padding:8px 16px;border-radius:99px;cursor:pointer;
+      background:rgba(255,255,255,0.2);
+      transition:all .2s ease;
+      font-weight:600;
+      font-size: 0.95em;
+    }
+    header .tabs .tab:hover{background:rgba(255,255,255,0.3);}
+    header .tabs .tab.active{background:var(--card);color:var(--primary)}
+    
+    /* Gaya Komponen Umum (Dipertahankan) */
+    .content{background:var(--bg);padding:24px 32px;min-height:70vh}
+    .card{
+      background:var(--card);
+      border-radius:12px;
+      padding:16px;
+      box-shadow:0 4px 10px rgba(0,0,0,.04);
+      margin-bottom:16px;
+    }
+    .card h4{margin-top:0;margin-bottom:12px}
+    .item{
+      display:flex;justify-content:space-between;align-items:center;
+      padding:12px 0;border-bottom:1px solid #eee;
+    }
+    .item:last-child{border-bottom:none}
+    .muted{color:var(--muted)}
+    .small{font-size:.85em}
+    .btn{
+      padding:8px 12px;
+      border-radius:8px;
+      border:1px solid transparent;
+      cursor:pointer;
+      font-size:.9em;
+      font-weight:600;
+      transition:all .2s ease;
+    }
+    .btn.primary{background:var(--primary);color:var(--card)}
+    .btn.danger{background:var(--danger);color:var(--card)}
+    .btn.ghost{
+      background:transparent;color:var(--primary-2);border-color:var(--primary-2);
+      font-size:.8em;
+    }
+    .btn.ghost:hover{background:var(--primary-2);color:var(--card)}
+    .danger.ghost{color:var(--danger);border-color:var(--danger)}
+    .danger.ghost:hover{background:var(--danger);color:var(--card)}
+    .danger:hover{background:#c03030}
+    .form-group{margin-bottom:12px}
+    .form-group label{display:block;margin-bottom:4px;font-weight:600}
+    .form-group input, .form-group select, .form-group textarea{
+      width:100%;
+      padding:8px 12px;
+      border:1px solid #ccc;
+      border-radius:8px;
+      font-size:1em;
+    }
+    .form-row{display:flex;gap:12px;margin-bottom:12px}
+    .form-row > *{flex:1}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .pill{
+      padding:4px 10px;
+      border-radius:99px;
+      font-weight:600;
+      font-size:.75em;
+    }
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+    .stat-grid .card{margin:0}
+    
+    /* Warna Status Laundry */
+    .status-0 { background: #fef3c7; color: #b45309; } /* Baru Masuk (Kuning) */
+    .status-1 { background: #bfdbfe; color: #1e40af; } /* Proses Cuci (Biru Muda) */
+    .status-2 { background: #d1fae5; color: #065f46; } /* Siap Ambil (Hijau Muda) */
+    .status-3 { background: var(--primary); color: #ffffff; } /* Selesai/Diambil (Hijau Tua) */
+
+    /* Warna Prioritas/Paket (Didasarkan pada nama paket awal untuk konsistensi CSS) */
+    .package-Express { background: #e03b3b; color: #ffffff; }
+    .package-Reguler { background: #1e90ff; color: #ffffff; }
+    .package-CuciLipat { background: #4a5568; color: #ffffff; }
+
+    /* Tambahan untuk harga di dashboard */
+    .stat-total { background: var(--primary); color: var(--card); }
+    .stat-total div:first-child { color: rgba(255, 255, 255, 0.7); }
+    
+    /* Area tampilan modal untuk Nota/Struk */
+    .modal {
+        display: none; 
+        position: fixed; 
+        z-index: 20; 
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4); 
+    }
+    .modal-content {
+        background-color: #fefefe;
+        margin: 5% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 350px;
+        border-radius: 8px; 
+    }
+    .modal-content button { margin-top: 10px; } 
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Pencatatan Laundry Kiloan</h1>
+      <div class="tabs">
+        <div class="tab active" data-tab="dashboard">Dashboard & Daftar Order</div>
+        <div class="tab" data-tab="new-order">Input Order Baru</div>
+        <div class="tab" data-tab="admin">Admin Panel</div>
+      </div>
+    </header>
+    <div class="content">
+
+      <div id="dashboard" class="view">
+        <div class="card"> 
+          <h4>Ringkasan Keuangan & Status</h4>
+          <div class="stat-grid" id="statusSummary"></div>
+        </div>
+
+        <div class="card">
+            <h4>Grafik Omzet Bulanan (Analisis)</h4>
+            <canvas id="monthlyOrderChart" style="max-height: 300px;"></canvas>
+            <div class="muted small" style="margin-top:10px;">*Grafik ini menampilkan total omzet per bulan. (Logika charting tidak sepenuhnya diimplementasikan)*</div>
+        </div>
+
+        <div class="card">
+          <h4>Daftar Order Aktif</h4>
+          <div class="form-row">
+            <div class="form-group">
+                <input 
+                  type="text" id="inpSearch" placeholder="Cari nama/ID order..."> 
+            </div>
+            <div class="form-group">
+                <select id="selFilterStatus">
+                    <option value="all">Semua Status</option>
+                    <option value="Baru Masuk">Baru Masuk</option>
+                    <option value="Proses Cuci">Proses Cuci</option> 
+                    <option value="Siap Ambil">Siap Ambil</option>
+                    <option value="Selesai/Diambil">Selesai/Diambil</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <select id="selFilterPayment">
+                    <option value="all">Semua Pembayaran</option>
+                    <option value="Sudah Bayar">Sudah Bayar</option>
+                    <option value="Belum Bayar">Belum Bayar</option>
+                </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+                <label for="filterDateStart" class="small muted">Tanggal Masuk Mulai</label>
+                <input type="date" id="filterDateStart">
+            </div>
+            <div class="form-group">
+                <label for="filterDateEnd" class="small muted">Tanggal Masuk Sampai</label>
+                <input type="date" id="filterDateEnd">
+            </div>
+          </div>
+          <div id="orderList"></div> 
+        </div>
+      </div>
+
+      <div id="new-order" class="view" style="display:none">
+        <div class="card">
+          <h4>Formulir Input Order Baru</h4>
+          <form id="orderForm">
+            <div class="form-row">
+                <div class="form-group">
+                  <label for="customerName">Nama Pelanggan</label> 
+                  <input type="text" id="customerName" required>
+                </div>
+                <div class="form-group">
+                    <label for="customerPhone">Nomor HP</label>
+                  <input type="tel" id="customerPhone" placeholder="Opsional"> 
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="packageType">Pilihan Paket</label> 
+                  <select id="packageType" required> 
+                        </select>
+                </div>
+                <div class="form-group">
+                    <label for="orderWeight">Berat (Kg)</label>
+                  <input type="number" step="0.1" min="0.1" id="orderWeight" required value="1"> 
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="orderPieces">Jumlah Potong/Item (Opsional)</label> 
+                    <input type="number" min="0" id="orderPieces" value="0" placeholder="Contoh: 10 potong">
+                </div>
+                <div class="form-group">
+                    <label for="discountAmount">Diskon (Rp)</label>
+                    <input type="number" min="0" id="discountAmount" value="0" placeholder="Contoh: 5000">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                  <label for="totalPrice">Total Harga</label> 
+                    <input type="text" id="totalPrice" readonly style="font-weight:700; background:#eee;">
+                </div>
+                <div class="form-group">
+                    <label for="orderDateIn">Tanggal Masuk</label>
+                    <input type="date" id="orderDateIn" required>
+                </div>
+            </div> 
+            <div class="form-group">
+                <label for="orderNotes">Catatan Tambahan</label>
+                <textarea id="orderNotes" rows="2" placeholder="Detail pakaian, request khusus, dll."></textarea>
+            </div>
+            <button type="submit" class="btn primary">Simpan Order</button>
+            <button type="reset" class="btn danger" style="margin-left:8px;">Reset Form</button> 
+          </form>
+        </div>
+      </div>
+
+      <div id="admin" class="view" style="display:none">
+
+        <div class="card"> 
+            <h4>Update Status Order & Pembayaran</h4>
+            <div class="form-group">
+                <label for="selectOrderAdmin">Pilih Order (ID - Pelanggan)</label>
+                <select id="selectOrderAdmin"></select>
+            </div>
+            <div class="form-row">
+                <div class="form-group"> 
+                    <label for="selectStatusAdmin">Ubah Status</label>
+                    <select id="selectStatusAdmin">
+                        <option value="Baru Masuk">Baru Masuk</option>
+                        <option value="Proses Cuci">Proses Cuci</option> 
+                        <option value="Siap Ambil">Siap Ambil</option>
+                        <option value="Selesai/Diambil">Selesai/Diambil</option>
+                    </select>
+                </div>
+                <div class="form-group"> 
+                    <label for="paymentStatus">Status Pembayaran</label>
+                    <select id="paymentStatus">
+                        <option value="Belum Bayar">Belum Bayar</option>
+                        <option value="Sudah Bayar">Sudah Bayar</option> 
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="orderDateInAdmin">Tanggal Masuk Order</label>
+                <input type="date" id="orderDateInAdmin" required>
+            </div>
+            <div class="form-group">
+                <label for="adminComment">Catatan Admin</label>
+                <textarea id="adminComment" rows="2" placeholder="Catatan saat update status atau pembayaran."></textarea> 
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button class="btn primary" id="btnUpdateStatus">Update Order</button>
+                <button class="btn ghost" id="btnDuplicateOrder" style="color: var(--primary); border-color: var(--primary);">Duplikasi Order</button>
+                <button class="btn ghost danger" id="btnDeleteOrder">Hapus Order</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h4>Manajemen Pilihan Paket</h4>
+            <div id="packageListAdmin"></div>
+            <div style="margin-top:16px;"> 
+                <button class="btn primary" id="btnAddPackage">Tambah Paket Baru</button>
+            </div>
+        </div>
+        
+        <div class="card" id="packageFormCard" style="display:none; 
+        margin-top: 16px;">
+            <h4><span id="packageFormTitle">Tambah</span> Paket Laundry</h4>
+            <form id="packageForm">
+                <input type="hidden" id="packageIdToEdit">
+                <div class="form-group">
+                    <label for="packageName">Nama Paket (Contoh: Express)</label>
+                    <input type="text" id="packageName" required> 
+                </div>
+                <div class="form-group">
+                    <label for="packagePrice">Harga per Kilo (Rp)</label>
+                    <input type="number" min="0" id="packagePrice" required>
+                </div> 
+                <div class="form-group">
+                    <label for="packageProcessDays">Waktu Proses (Hari)</label>
+                    <input type="number" min="1" id="packageProcessDays" required value="1">
+                </div> 
+                <div class="form-group">
+                    <label for="packageDescription">Deskripsi Singkat (Contoh: Selesai 1 Hari)</label>
+                    <input type="text" id="packageDescription">
+                </div>
+                <div style="display:flex;gap:8px;"> 
+                    <button type="submit" class="btn primary" id="btnSavePackage">Simpan Paket</button>
+                    <button type="button" class="btn danger ghost" id="btnCancelPackageForm">Batal</button>
+                </div>
+            </form>
+        </div>
+       
+        <div class="card"> 
+            <h4>Import & Export Data (Backup)</h4>
+            <p class="muted small">Unduh semua data order dan paket yang tersimpan di browser Anda sebagai file JSON.</p>
+            <button class="btn primary" id="btnExportData">Export Data</button>
+
+            <div style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 16px;">
+                <p class="muted small">Unggah file JSON backup untuk memuat kembali data.</p>
+                <input type="file" id="inpImportData" accept=".json" style="margin-bottom: 8px;">
+                <button class="btn primary" id="btnImportData" style="margin-top: 8px;">Import Data Sekarang</button>
+            </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="printModal" class="modal">
+    <div class="modal-content"> 
+        <div id="printContent" class="print-area">
+            </div>
+        <button class="btn primary" onclick="printStruk()">Cetak Struk</button>
+        <button class="btn danger ghost" onclick="document.getElementById('printModal').style.display='none'">Tutup</button>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================
+    // JAVASCRIPT: LOGIKA APLIKASI LAUNDRY KILOAN
+    // =========================================================
+    
+    // Key Storage
+    const KEY_ORDERS = 'laundry_orders_v1'; 
+    const KEY_PACKAGES = 'laundry_packages_v1'; 
+    
+    // Data Paket (UPDATED: Added processDays)
+    const INITIAL_PACKAGES = [ 
+        { id: 'pkg_express', name: 'Express', price: 10000, processDays: 1, description: 'Selesai cepat (Express)' }, // 1 Hari
+        { id: 'pkg_reguler', name: 'Reguler', price: 8000, processDays: 2, description: 'Selesai 2 Hari' }, // 2 Hari
+        { id: 'pkg_cuci_lipat', name: 'CuciLipat', price: 5000, processDays: 3, description: 'Selesai 3 Hari' } // 3 Hari
+    ];
+    // Global Data
+    let orders = []; 
+    let packages = []; 
+    let monthlyOrderChart = null; // Variable untuk Chart.js instance
+
+    // Helpers
+    const $ = id => document.getElementById(id); 
+    const uid = (p='L') => p + '_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6); 
+    const formatDate = (dateString) => {
+        if (!dateString) return '-';
+        const datePart = dateString.split('T')[0]; 
+        return new Date(datePart).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    const formatDateTime = (dateString) => new Date(dateString).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); 
+    const formatRupiah = (number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number); 
+
+    // NEW: FUNGSI ESTIMASI TANGGAL KELUAR (Menggunakan processDays)
+    function getEstimatedDateOut(order) {
+        const dateIn = new Date(order.dateIn);
+        
+        // Cari paket berdasarkan nama
+        const pkg = packages.find(p => p.name === order.package);
+        
+        // Gunakan processDays dari paket, default 3 hari jika tidak ditemukan
+        const daysToAdd = pkg ? pkg.processDays : 3; 
+
+        const dateOut = new Date(dateIn);
+        dateOut.setDate(dateIn.getDate() + daysToAdd);
+        
+        // Pastikan format tanggal saja untuk ditampilkan
+        return formatDate(dateOut.toISOString().split('T')[0]); 
+    }
+
+    // NEW: FUNGSI GENERATE SHORT ID (dipertahankan dari kode sebelumnya)
+    function getPackagePrefix(packageName) {
+        if (packageName.toLowerCase().includes('express')) return 'E';
+        if (packageName.toLowerCase().includes('reguler')) return 'R';
+        if (packageName.toLowerCase().includes('cuci')) return 'CL';
+        return 'L';
+    }
+
+    function generateShortId(packageName) {
+        const prefix = getPackagePrefix(packageName);
+        const relatedOrders = orders.filter(r => r.shortId && r.shortId.startsWith(prefix));
+        
+        let maxNum = 0;
+        relatedOrders.forEach(order => {
+            const numStr = order.shortId.substring(prefix.length).replace(/\D/g, '');
+            const num = parseInt(numStr) || 0;
+            if (num > maxNum) {
+                maxNum = num;
+            }
+        });
+
+        const newNum = maxNum + 1;
+        return prefix + String(newNum).padStart(2, '0');
+    }
+
+    // Load/Save Data
+    function loadData() {
+      orders = JSON.parse(localStorage.getItem(KEY_ORDERS) || '[]'); 
+      packages = JSON.parse(localStorage.getItem(KEY_PACKAGES)); 
+      if (!packages || packages.length === 0) {
+          packages = INITIAL_PACKAGES; 
+          savePackages();
+      }
+      
+      populatePackageDropdown();
+      displayOrderSummary();
+      populateAdminDropdown();
+      renderPackageList(); 
+    }
+    
+    function saveOrders() {
+      localStorage.setItem(KEY_ORDERS, JSON.stringify(orders)); 
+    }
+    
+    function savePackages() { 
+        localStorage.setItem(KEY_PACKAGES, JSON.stringify(packages)); 
+        populatePackageDropdown(); 
+        renderPackageList(); 
+    }
+
+    // =========================================================
+    // TAB NAVIGATION HANDLER
+    // =========================================================
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const t = btn.dataset.tab;
+        document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+        $(t).style.display = '';
+
+        if (t === 'dashboard') {
+            displayOrderSummary(); 
+            renderChart(); // NEW: Render chart when opening dashboard
+        }
+        if (t === 'new-order') {
+          setInitialDate();
+          calculatePrice();
+        }
+        if (t === 'admin') {
+          populateAdminDropdown();
+          renderPackageList();
+        }
+      }); 
+    });
+
+    // =========================================================
+    // FUNGSI INPUT ORDER BARU (UPDATED)
+    // =========================================================
+    function populatePackageDropdown() {
+        const select = $('packageType'); 
+        select.innerHTML = ''; 
+        packages.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p.name;
+            option.textContent = `${p.name} - ${formatRupiah(p.price)}/Kg (${p.description})`;
+            select.appendChild(option);
+        }); 
+    }
+
+    // UPDATED: Calculate Price with Discount
+    function calculatePrice() {
+        const weight = parseFloat($('orderWeight').value) || 0; 
+        const discount = parseInt($('discountAmount').value) || 0; // NEW: Get discount
+        const selectedPackageName = $('packageType').value; 
+        const pkg = packages.find(p => p.name === selectedPackageName);
+        
+        let total = 0; 
+        if (pkg) {
+            total = (weight * pkg.price) - discount; // Apply discount
+        }
+        
+        // Pastikan total tidak negatif
+        total = Math.max(0, total);
+        
+        $('totalPrice').value = formatRupiah(total); 
+        return total;
+    }
+    
+    function setInitialDate() {
+      $('orderDateIn').valueAsDate = new Date(); 
+    }
+
+    $('packageType').addEventListener('change', calculatePrice); 
+    $('orderWeight').addEventListener('input', calculatePrice); 
+    $('discountAmount').addEventListener('input', calculatePrice); // NEW: Discount listener
+
+    $('orderForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const now = new Date().toISOString();
+      const customerName = $('customerName').value.trim();
+      const selectedPackageName = $('packageType').value;
+      const weight = parseFloat($('orderWeight').value);
+      const pieces = parseInt($('orderPieces').value) || 0; // NEW
+      const discount = parseInt($('discountAmount').value) || 0; // NEW
+      const total = calculatePrice();
+      
+      const pkg = packages.find(p => p.name === selectedPackageName); 
+      const unitPrice = pkg ? pkg.price : 0; 
+
+      const newOrder = {
+        id: uid('L'),
+        shortId: generateShortId(selectedPackageName), 
+        customerName: customerName,
+        customerPhone: $('customerPhone').value.trim(),
+        dateIn: $('orderDateIn').value,
+        package: selectedPackageName, 
+        unitPrice: unitPrice, 
+        weight: weight,
+        pieces: pieces, // NEW
+        discount: discount, // NEW
+        totalPrice: total, 
+        notes: $('orderNotes').value.trim(),
+        timestampStart: now,
+        timestampEnd: null,
+        status: 'Baru Masuk',
+        paymentStatus: 'Belum Bayar',
+        history: [{
+          timestamp: now,
+          action: "Order Masuk",
+          user: "Kasir",
+          comment: `Paket: ${selectedPackageName}, Berat: ${weight} Kg, Potong: ${pieces}, Diskon: ${formatRupiah(discount)}, Total: ${formatRupiah(total)}` 
+        }]
+      };
+      orders.unshift(newOrder); 
+      saveOrders();
+      alert(`Order dari ${customerName} (ID: ${newOrder.shortId}) Berhasil Disimpan! Total: ${formatRupiah(total)}`);
+      this.reset();
+      setInitialDate();
+      
+      document.querySelector('.tab[data-tab="dashboard"]').click(); 
+    }); 
+
+    // =========================================================
+    // FUNGSI DASHBOARD & LIST (UPDATED)
+    // =========================================================
+    
+    $('inpSearch').addEventListener('input', displayOrderSummary); 
+    $('selFilterStatus').addEventListener('change', displayOrderSummary); 
+    $('selFilterPayment').addEventListener('change', displayOrderSummary); // NEW: Payment Filter
+    $('filterDateStart').addEventListener('change', displayOrderSummary); // NEW: Date Filter
+    $('filterDateEnd').addEventListener('change', displayOrderSummary); // NEW: Date Filter
+    
+    function getOrderStatusAndFinance() {
+      // ... (Status Summary Logic Remains the Same)
+      const statusCounts = {
+        'Baru Masuk': 0, 
+        'Proses Cuci': 0, 
+        'Siap Ambil': 0, 
+        'Selesai/Diambil': 0, 
+        'Total Order': orders.length 
+      };
+      let totalOmzet = 0; 
+      let totalPendingPayment = 0; 
+
+      orders.forEach(r => {
+        statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
+        totalOmzet += r.totalPrice;
+        if (r.paymentStatus === 'Belum Bayar') {
+             totalPendingPayment += r.totalPrice;
+        }
+      });
+      return { statusCounts, totalOmzet, totalPendingPayment }; 
+    }
+    
+    function displayOrderSummary() {
+      const { statusCounts, totalOmzet, totalPendingPayment } = getOrderStatusAndFinance(); 
+      const summaryContainer = $('statusSummary'); 
+      summaryContainer.innerHTML = `
+        <div class="card small stat-total"><div>Total Omzet (Semua Order)</div><div style="font-weight:800;margin-top:8px">${formatRupiah(totalOmzet)}</div></div>
+        <div class="card small status-0"><div>Baru Masuk</div><div style="font-weight:800;margin-top:8px">${statusCounts['Baru Masuk']}</div></div>
+        <div class="card small status-1"><div>Proses Cuci</div><div style="font-weight:800;margin-top:8px">${statusCounts['Proses Cuci']}</div></div>
+        <div class="card small status-2"><div>Siap Ambil</div><div style="font-weight:800;margin-top:8px">${statusCounts['Siap Ambil']}</div></div>
+        <div class="card small danger"><div>Pending Bayar (Semua)</div><div style="font-weight:800;margin-top:8px">${formatRupiah(totalPendingPayment)}</div></div>
+      `; 
+      renderOrderList(orders); 
+    }
+
+    function renderOrderList(data) {
+      const searchTerm = $('inpSearch').value.toLowerCase(); 
+      const filterStatus = $('selFilterStatus').value; 
+      const filterPayment = $('selFilterPayment').value; // NEW
+      const filterDateStart = $('filterDateStart').value; // NEW
+      const filterDateEnd = $('filterDateEnd').value; // NEW
+      
+      const listContainer = $('orderList'); 
+      listContainer.innerHTML = ''; 
+      
+      data.forEach(r => {
+        if (!r.shortId) { r.shortId = generateShortId(r.package); }
+      });
+
+
+      const filteredOrders = data.filter(r => {
+        const idToSearch = (r.shortId || r.id.substring(0, 8)).toLowerCase();
+        const matchesSearch = r.customerName.toLowerCase().includes(searchTerm) || 
+                              idToSearch.includes(searchTerm);
+        const matchesStatus = filterStatus === 'all' || r.status === filterStatus;
+        const matchesPayment = filterPayment === 'all' || r.paymentStatus === filterPayment; // NEW
+
+        // NEW: Date Range Filter Logic (check dateIn)
+        let matchesDate = true;
+        if (filterDateStart && r.dateIn < filterDateStart) matchesDate = false;
+        if (filterDateEnd && r.dateIn > filterDateEnd) matchesDate = false;
+
+        return matchesSearch && matchesStatus && matchesPayment && matchesDate;
+      }).sort((a, b) => new Date(b.timestampStart) - new Date(a.timestampStart)); 
+
+      if (filteredOrders.length === 0) {
+        listContainer.innerHTML = '<div class="muted small">Tidak ada order yang sesuai kriteria.</div>'; 
+        return; 
+      }
+      
+      filteredOrders.forEach(r => {
+        const statusIndex = ['Baru Masuk', 'Proses Cuci', 'Siap Ambil', 'Selesai/Diambil'].indexOf(r.status);
+        const statusClass = 'status-' + (statusIndex >= 0 ? statusIndex : 0);
+        
+        const pkgInitial = INITIAL_PACKAGES.find(p => p.name === r.package);
+        const packageClass = pkgInitial ? `package-${pkgInitial.name}` : 'muted'; 
+
+        const paymentPill = r.paymentStatus === 'Sudah Bayar' 
+            ? `<span class="pill status-3" style="background:#065f46; color:white;">Sudah Bayar</span>` 
+            : `<span class="pill danger" style="background:#fef3c7; color:#b45309;">Belum Bayar</span>`;
+        
+        const dateOutDisplay = r.status === 'Selesai/Diambil' && r.timestampEnd 
+            ? `Selesai: ${formatDate(r.timestampEnd)}` 
+            : `Estimasi: ${getEstimatedDateOut(r)}`;
+
+        const itemDetail = `${r.weight} Kg ${r.pieces > 0 ? `• ${r.pieces} Potong` : ''} ${r.discount > 0 ? `• Diskon` : ''}`; // NEW: Show pieces and discount summary
+
+        const el = document.createElement('div');
+        el.className = 'item';
+        el.innerHTML = `
+          <div>
+            <div style="font-weight:700">${r.customerName} - ${formatRupiah(r.totalPrice)}</div> 
+            <div class="muted small">ID: ${r.shortId || r.id.substring(0, 8)} • ${itemDetail}</div> 
+            <div class="muted small">Masuk: ${formatDate(r.dateIn)} • ${dateOutDisplay}</div>
+            <div class="muted small">HP: ${r.customerPhone ||
+            '-'}</div> 
+          </div>
+          <div style="text-align:right; display:flex; flex-direction:column; gap:4px;">
+            <div class="pill ${statusClass}">${r.status}</div>
+            <div class="pill ${packageClass}">${r.package}</div>
+            ${paymentPill}  <button class="btn ghost" style="margin-top:8px;"
+            onclick="showOrderDetails('${r.id}')">Detail/Update</button> 
+            <button class="btn ghost primary" onclick="preparePrint('${r.id}')">Print Struk</button>
+          </div>
+        `;
+        listContainer.appendChild(el); 
+      });
+    }
+
+    function showOrderDetails(id) {
+        $('selectOrderAdmin').value = id;
+        document.querySelector('.tab[data-tab="admin"]').click(); 
+        const order = orders.find(r => r.id === id); 
+        if(order) {
+            $('selectStatusAdmin').value = order.status; 
+            $('paymentStatus').value = order.paymentStatus; 
+            $('orderDateInAdmin').value = order.dateIn; // NEW: Set Date In
+            $('adminComment').placeholder = `Catatan untuk update status order ${order.customerName} (${order.shortId || order.id.substring(0, 8)})`; 
+            $('adminComment').value = ''; 
+        }
+    }
+    
+    // =========================================================
+    // FUNGSI PRINT STRUK (UPDATED)
+    // =========================================================
+
+    window.preparePrint = function(orderId) {
+        const order = orders.find(r => r.id === orderId); 
+        if (!order) {
+            alert('Order tidak ditemukan.');
+            return; 
+        }
+        
+        const unitPrice = order.unitPrice ||
+        (packages.find(p => p.name === order.package)?.price || (order.totalPrice / order.weight)); 
+        
+        const dateOutText = order.status === 'Selesai/Diambil' 
+                            ? (order.timestampEnd ? formatDate(order.timestampEnd) : formatDate(new Date().toISOString())) 
+                            : getEstimatedDateOut(order); 
+        
+        const printHTML = `
+            <div class="print-area">
+                <h2>NOTA LAUNDRY KILOAN</h2>
+                <p style="text-align:center; margin-bottom: 15px; font-size: 0.8em;">
+                    Terima kasih telah menggunakan jasa kami. 
+                </p>
+                
+                <table style="margin-bottom: 10px;">
+                    <tr><td style="width: 40%;">**ID Order**</td><td>: ${order.shortId || order.id.substring(0, 10)}</td></tr>
+                    <tr><td>**Pelanggan**</td><td>: ${order.customerName}</td></tr>
+                    <tr><td>**HP**</td><td>: ${order.customerPhone || '-'}</td></tr> 
+                    <tr><td>**Tanggal Masuk**</td><td>: ${formatDate(order.dateIn)}</td></tr>
+                    <tr><td>**Tanggal Ambil**</td><td>: ${dateOutText}</td></tr>
+                </table>
+
+                <table style="border-top: 1px dashed #000; margin-top: 10px;">
+                    <tr><td colspan="2" style="font-weight: bold;">DETAIL PESANAN</td></tr> 
+                    <tr><td style="width: 50%;">Paket</td><td style="text-align:right;">: ${order.package}</td></tr>
+                    <tr><td>Berat</td><td style="text-align:right;">: ${order.weight} Kg</td></tr>
+                    ${order.pieces > 0 ? `<tr><td>Jumlah Potong</td><td style="text-align:right;">: ${order.pieces}</td></tr>` : ''} <tr><td>Harga/Kg</td><td style="text-align:right;">: ${formatRupiah(unitPrice)}</td></tr>
+                    ${order.discount > 0 ? `<tr style="color: #e03b3b;"><td>Diskon</td><td style="text-align:right;">: - ${formatRupiah(order.discount)}</td></tr>` : ''} </table>
+
+                <div class="print-total"> 
+                    <table style="font-size: 1em;">
+                        <tr><td style="width: 50%;">**TOTAL HARGA**</td><td style="text-align:right;">: **${formatRupiah(order.totalPrice)}**</td></tr>
+                        <tr><td>**Pembayaran**</td><td style="text-align:right;">: ${order.paymentStatus}</td></tr>
+                        <tr><td>**Status Order**</td><td style="text-align:right;">: ${order.status}</td></tr> 
+                    </table>
+                </div>
+
+                <div class="print-footer">
+                    <p>Catatan: ${order.notes ||
+                    'Tidak ada catatan khusus.'}</p> 
+                    <p style="margin-top: 5px;">*Simpan nota ini sebagai bukti pengambilan*</p>
+                    <p style="font-size: 0.7em;">${formatDateTime(new Date().toISOString())} | Dibuat oleh Kasir</p> 
+                </div>
+            </div>
+        `;
+        $('printContent').innerHTML = printHTML; 
+        $('printModal').style.display = 'block';
+    }
+
+    window.printStruk = function() {
+        const printContentHTML = $('printContent').innerHTML; 
+        const printWindow = window.open('', '_blank'); 
+        
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Struk Laundry</title>
+                <style>
+                    /* Gaya untuk Printer Termal / Kertas Kecil */
+                    @page { size: 80mm auto; margin: 0; } 
+                    body { 
+                        font-family: monospace; 
+                        padding: 10px; 
+                        margin: 0; 
+                        color: #000; 
+                        font-size: 10pt;
+                        width: 80mm; 
+                    }
+                    .print-area h2 { font-size: 1.1em; text-align: center; margin: 0 0 5px 0; }
+                    .print-area table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+                    .print-area table td { padding: 3px 0; text-align: left; } 
+                    .print-footer { margin-top: 15px; border-top: 1px dashed #000; padding-top: 10px; text-align: center; font-size: 0.8em; }
+                    .print-total { border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; font-size: 1.1em; margin-top: 5px; }
+                </style>
+            </head>
+            <body>
+                ${printContentHTML}
+                <script>
+                    window.onload = function() {
+                        window.print(); 
+                        window.close(); 
+                    };
+                
+        `);
+        printWindow.document.close(); 
+        $('printModal').style.display='none'; 
+    }
+
+    // =========================================================
+    // FUNGSI MANAJEMEN PAKET (UPDATED: Added processDays)
+    // =========================================================
+    
+    function renderPackageList() {
+        const container = $('packageListAdmin'); 
+        container.innerHTML = ''; 
+
+        if (packages.length === 0) {
+            container.innerHTML = '<div class="muted small">Tidak ada paket terdaftar.</div>'; 
+            return;
+        }
+
+        packages.forEach(p => {
+            const pkgInitial = INITIAL_PACKAGES.find(ip => ip.name === p.name);
+            const packageClass = pkgInitial ? `package-${pkgInitial.name}` : 'muted';
+
+            const el = document.createElement('div');
+            el.className = 'item';
+            el.innerHTML = `
+                <div> 
+                    <div style="font-weight:700">${p.name} - ${formatRupiah(p.price)}/Kg</div>
+                    <div class="muted small">Waktu Proses: ${p.processDays} Hari • ${p.description}</div> </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn ghost" onclick="showEditPackageForm('${p.id}')">Edit</button> 
+                    <button class="btn danger ghost" onclick="deletePackage('${p.id}')">Hapus</button>
+                </div>
+            `;
+            container.appendChild(el);
+        }); 
+    }
+
+    window.showEditPackageForm = function(packageId) {
+        showPackageForm('edit', packageId); 
+    }
+    
+    function showPackageForm(mode, packageId = null) {
+        const formCard = $('packageFormCard'); 
+        const formTitle = $('packageFormTitle'); 
+        const packageIdToEdit = $('packageIdToEdit');
+        const btnSavePackage = $('btnSavePackage');
+        
+        formCard.style.display = 'block';
+        packageIdToEdit.value = ''; 
+        if (mode === 'add') {
+            formTitle.textContent = 'Tambah'; 
+            $('packageName').value = ''; 
+            $('packagePrice').value = '';
+            $('packageProcessDays').value = '1'; // NEW: Default 1 day
+            $('packageDescription').value = '';
+            btnSavePackage.textContent = 'Simpan Paket Baru'; 
+        } else if (mode === 'edit' && packageId) {
+            const pkg = packages.find(p => p.id === packageId); 
+            if (pkg) {
+                formTitle.textContent = 'Edit'; 
+                packageIdToEdit.value = pkg.id; 
+                $('packageName').value = pkg.name;
+                $('packagePrice').value = pkg.price;
+                $('packageProcessDays').value = pkg.processDays; // NEW: Set existing days
+                $('packageDescription').value = pkg.description;
+                btnSavePackage.textContent = 'Update Paket'; 
+            }
+        }
+    }
+
+    function hidePackageForm() {
+        $('packageFormCard').style.display = 'none'; 
+        $('packageForm').reset(); 
+        $('packageIdToEdit').value = '';
+    }
+    
+    window.deletePackage = function(packageId) {
+        const pkg = packages.find(p => p.id === packageId); 
+        if (!pkg) return;
+        
+        const activeOrders = orders.filter(o => o.package === pkg.name && o.status !== 'Selesai/Diambil'); 
+        if (activeOrders.length > 0) {
+            alert(`Paket "${pkg.name}" tidak dapat dihapus karena masih digunakan oleh ${activeOrders.length} order yang belum selesai. Selesaikan order tersebut atau ubah paketnya terlebih dahulu.`); 
+            return;
+        }
+
+        if (confirm(`Yakin ingin menghapus paket "${pkg.name}"? Order yang sudah selesai akan tetap memiliki catatan harga yang benar.`)) {
+            packages = packages.filter(p => p.id !== packageId); 
+            savePackages();
+            alert(`Paket "${pkg.name}" berhasil dihapus.`);
+        }
+    }
+
+    $('btnAddPackage').addEventListener('click', () => showPackageForm('add')); 
+    $('btnCancelPackageForm').addEventListener('click', hidePackageForm); 
+    
+    $('packageForm').addEventListener('submit', function(e) { 
+        e.preventDefault();
+        
+        const id = $('packageIdToEdit').value;
+        const name = $('packageName').value.trim();
+        const price = parseInt($('packagePrice').value);
+        const processDays = parseInt($('packageProcessDays').value); // NEW
+        const description = $('packageDescription').value.trim();
+        
+        if (isNaN(price) || price < 0 || isNaN(processDays) || processDays < 1) { // NEW: Validate processDays
+            alert('Harga per Kilo dan Waktu Proses harus berupa angka positif.');
+            return;
+        }
+
+        if (id) {
+            const pkgIndex = packages.findIndex(p => p.id === id);
+ 
+            if (pkgIndex !== -1) { 
+                
+                if (packages.some((p, i) => p.name === name && i !== pkgIndex)) {
+                    alert('Nama paket baru sudah digunakan oleh paket lain.'); 
+                    return;
+                }
+                
+                if (packages[pkgIndex].name !== name) { 
+                    orders.forEach(order => {
+                        if (order.package === packages[pkgIndex].name) {
+                            order.package = name; 
+                        }
+                    });
+                    saveOrders(); 
+                }
+
+                packages[pkgIndex] = { 
+                    ...packages[pkgIndex], 
+                    name: name, 
+                    price: price, 
+                    processDays: processDays, // NEW: Update processDays
+                    description: description 
+                }; 
+                alert(`Paket "${name}" berhasil diupdate!`); 
+            }
+        } else {
+            if (packages.some(p => p.name === name)) {
+                alert('Nama paket sudah ada. Gunakan nama yang berbeda.');
+                return; 
+            }
+            
+            const newPackage = {
+                id: uid('pkg'),
+                name: name,
+                price: price,
+                processDays: processDays, // NEW: Save processDays
+                description: description
+            }; 
+            packages.push(newPackage);
+            alert(`Paket "${name}" berhasil ditambahkan!`); 
+        }
+
+        savePackages();
+        hidePackageForm();
+    }); 
+    // =========================================================
+    // FUNGSI ADMIN PANEL (UPDATED: Added Duplicate)
+    // =========================================================
+    
+    function populateAdminDropdown() {
+      const select = $('selectOrderAdmin'); 
+      select.innerHTML = '<option value="">-- Pilih Order untuk Diupdate --</option>'; 
+      
+      [...orders].sort((a, b) => new Date(b.timestampStart) - new Date(a.timestampStart)).forEach(r => {
+        const orderIdDisplay = r.shortId || r.id.substring(0, 8);
+        const option = document.createElement('option');
+        option.value = r.id;
+        option.textContent = `[${r.status}] ${orderIdDisplay} - ${r.customerName} (${formatRupiah(r.totalPrice)})`;
+        select.appendChild(option);
+      }); 
+    }
+
+    $('selectOrderAdmin').addEventListener('change', (e) => {
+        const id = e.target.value;
+        if(id) {
+            const order = orders.find(r => r.id === id);
+            if(order) {
+                $('selectStatusAdmin').value = order.status;
+                $('paymentStatus').value = order.paymentStatus;
+                $('orderDateInAdmin').value = order.dateIn; // NEW: Set Date In
+                $('adminComment').placeholder = `Catatan untuk update status order ${order.customerName} (${order.shortId || order.id.substring(0, 8)})`; 
+                $('adminComment').value = ''; 
+            }
+        } else {
+            $('selectStatusAdmin').value = 'Baru Masuk';
+            $('paymentStatus').value = 'Belum Bayar';
+            $('orderDateInAdmin').value = ''; 
+            $('adminComment').value = '';
+            $('adminComment').placeholder = 'Catatan saat update status atau pembayaran.';
+        }
+    });
+
+    // NEW: Duplicate Order Function
+    $('btnDuplicateOrder').addEventListener('click', duplicateOrder);
+
+    function duplicateOrder() {
+        const selectedId = $('selectOrderAdmin').value;
+        if (!selectedId) {
+            alert('Pilih order yang ingin diduplikasi.');
+            return;
+        }
+        const originalOrder = orders.find(r => r.id === selectedId);
+        if (!originalOrder) return;
+
+        // Set new-order form values
+        $('customerName').value = originalOrder.customerName;
+        $('customerPhone').value = originalOrder.customerPhone || '';
+        $('packageType').value = originalOrder.package;
+        $('orderWeight').value = originalOrder.weight;
+        $('orderPieces').value = originalOrder.pieces || 0; // NEW: Pieces
+        $('discountAmount').value = originalOrder.discount || 0; // NEW: Discount
+        $('orderNotes').value = originalOrder.notes || '';
+        setInitialDate(); // Set Tanggal Masuk ke hari ini
+
+        // Calculate price for display and switch to new-order tab
+        calculatePrice();
+        document.querySelector('.tab[data-tab="new-order"]').click(); 
+
+        alert(`Data order ${originalOrder.shortId || selectedId.substring(0, 8)} berhasil disalin ke formulir input order baru. Mohon periksa kembali Tanggal Masuk dan Berat.`);
+    }
+
+    $('btnUpdateStatus').addEventListener('click', () => { 
+      const selectedId = $('selectOrderAdmin').value;
+      const statusAdmin = $('selectStatusAdmin').value;
+      const paymentStatus = $('paymentStatus').value;
+      const newDateIn = $('orderDateInAdmin').value; // NEW: Get Date In
+      const comment = $('adminComment').value.trim();
+      
+      if (!selectedId) {
+        alert('Mohon pilih order yang akan diupdate.');
+        return;
+      }
+
+      const orderIndex = orders.findIndex(r => r.id === selectedId);
+      if (orderIndex === -1) return; 
+      
+      const orderToUpdate = orders[orderIndex];
+      const now = new Date().toISOString();
+      let logMessage = []; 
+      let needsSave = false;
+
+      // 1. Check Tanggal Masuk
+      if (orderToUpdate.dateIn !== newDateIn) {
+          logMessage.push(`Tanggal Masuk diubah dari ${formatDate(orderToUpdate.dateIn)} menjadi ${formatDate(newDateIn)}`);
+          orderToUpdate.dateIn = newDateIn; 
+          needsSave = true;
+      }
+      
+      // 2. Check Status
+      if (orderToUpdate.status !== statusAdmin) {
+        logMessage.push(`Status diubah dari ${orderToUpdate.status} menjadi ${statusAdmin}`);
+        orderToUpdate.status = statusAdmin;
+        needsSave = true; 
+        
+        if (statusAdmin === 'Selesai/Diambil' && !orderToUpdate.timestampEnd) {
+          orderToUpdate.timestampEnd = now;
+          logMessage.push(`Waktu Selesai/Ambil dicatat.`);
+        } else if (statusAdmin !== 'Selesai/Diambil') {
+          orderToUpdate.timestampEnd = null; 
+        }
+      }
+
+      // 3. Check Payment Status
+      if (orderToUpdate.paymentStatus !== paymentStatus) {
+        logMessage.push(`Pembayaran diubah dari ${orderToUpdate.paymentStatus} menjadi ${paymentStatus}`);
+        orderToUpdate.paymentStatus = paymentStatus; 
+        needsSave = true; 
+      }
+      
+      const finalComment = $('adminComment').value.trim();
+
+      if (needsSave || finalComment) {
+          let actionText = logMessage.length > 0 ? logMessage.join('; ') : 'Order Diperbarui (Tanpa Perubahan Status/Tanggal)';
+          
+          if (finalComment) {
+              actionText += (logMessage.length > 0 ? ' - ' : '') + `Catatan Admin: ${finalComment}`;
+          }
+
+          orderToUpdate.history.push({
+            timestamp: now,
+            action: needsSave ? 'Update Data Order' : 'Catatan Admin', 
+            user: 'Admin', 
+            comment: actionText 
+          }); 
+          saveOrders();
+          alert(`Order ID ${orderToUpdate.shortId || selectedId.substring(0, 8)} berhasil diupdate!`);
+      } else {
+          alert('Tidak ada perubahan yang disimpan.');
+          return; 
+      }
+
+      $('adminComment').value = '';
+      displayOrderSummary();
+      populateAdminDropdown();
+    });
+
+    $('btnDeleteOrder').addEventListener('click', () => { 
+        const selectedId = $('selectOrderAdmin').value;
+        if (!selectedId) {
+            alert('Mohon pilih order yang akan dihapus.');
+            return;
+        }
+
+        const order = orders.find(r => r.id === selectedId);
+        if (confirm(`Yakin ingin menghapus order dari ${order.customerName} (ID: ${order.shortId || selectedId.substring(0, 8)}) secara permanen?`)) {
+            orders = orders.filter(r => r.id !== selectedId); 
+            saveOrders();
+            alert(`Order ID ${order.shortId || selectedId.substring(0, 8)} berhasil dihapus.`);
+            
+            // Reset form
+            $('adminComment').value = '';
+            $('selectStatusAdmin').value = 'Baru Masuk';
+            $('paymentStatus').value = 'Belum Bayar';
+            $('orderDateInAdmin').value = '';
+            $('selectOrderAdmin').value = '';
+            
+            displayOrderSummary(); 
+            populateAdminDropdown();
+        }
+    }); 
+    // =========================================================
+    // FUNGSI EXPORT & IMPORT DATA (NEW: IMPORT)
+    // =========================================================
+    
+    $('btnExportData').addEventListener('click', exportData); 
+    function exportData() {
+        const dataToExport = {
+            orders: orders,
+            packages: packages, 
+            timestamp: new Date().toISOString()
+        }; 
+        const jsonString = JSON.stringify(dataToExport, null, 2); 
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob); 
+        const a = document.createElement('a'); 
+        a.href = url;
+        a.download = `laporan_laundry_backup_${new Date().toLocaleDateString('sv')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert('Data order dan paket berhasil diekspor sebagai file JSON.'); 
+    }
+
+    $('btnImportData').addEventListener('click', importData); 
+    function importData() {
+        const fileInput = $('inpImportData');
+        const file = fileInput.files[0];
+        if (!file) {
+            alert('Mohon pilih file JSON backup untuk diimpor.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const data = JSON.parse(event.target.result);
+                if (data.orders && data.packages) {
+                    if (confirm(`Yakin ingin menimpa data order dan paket saat ini dengan ${data.orders.length} order dari file backup? Tindakan ini tidak dapat dibatalkan.`)) {
+                        orders = data.orders;
+                        packages = data.packages;
+                        saveOrders();
+                        savePackages();
+                        
+                        alert('Data berhasil diimpor dan aplikasi akan di-reload.');
+                        window.location.reload(); 
+                    }
+                } else {
+                    alert('Format file JSON tidak valid. Pastikan mengandung properti "orders" dan "packages".');
+                }
+            } catch (e) {
+                alert('Gagal memproses file JSON: ' + e.message);
+            }
+        };
+        reader.readAsText(file);
+    }
+    
+    // =========================================================
+    // FUNGSI VISUALISASI CHART (Sederhana)
+    // =========================================================
+    function renderChart() {
+        if (monthlyOrderChart) {
+            monthlyOrderChart.destroy();
+        }
+        
+        // Data sederhana untuk demo: Omzet per bulan (tahun berjalan)
+        const monthlyOmzet = {};
+        orders.forEach(order => {
+            const date = new Date(order.dateIn);
+            const monthYear = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+            
+            if (!monthlyOmzet[monthYear]) {
+                monthlyOmzet[monthYear] = 0;
+            }
+            monthlyOmzet[monthYear] += order.totalPrice;
+        });
+
+        const sortedMonths = Object.keys(monthlyOmzet).sort();
+        const labels = sortedMonths.map(my => new Date(my).toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }));
+        const data = sortedMonths.map(my => monthlyOmzet[my]);
+
+        const ctx = $('monthlyOrderChart').getContext('2d');
+        monthlyOrderChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Total Omzet (Rp)',
+                    data: data,
+                    backgroundColor: 'rgba(18, 168, 122, 0.8)', // var(--primary)
+                    borderColor: 'rgba(18, 168, 122, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return formatRupiah(value);
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+
+
+    // =========================================================
+    // INISIALISASI
+    // =========================================================
+    document.addEventListener('DOMContentLoaded', () => { 
+      loadData();
+      setInitialDate();
+      
+      document.querySelector('.tab[data-tab="dashboard"]').click();
+    });
+  </script>
+</body>
+</html>
